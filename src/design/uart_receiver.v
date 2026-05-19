@@ -17,7 +17,7 @@ module uart_rx #(parameter width = 8)(
     reg [$clog2(width):0] index;
     reg                   rx1, rx2;
     reg                   rx2_sampled;
-    reg [3:0]             count
+    reg [3:0]             count;
     
     always @(posedge baud_op_clk or negedge sys_rst) begin
         if (!sys_rst) begin rx1 <= 1'b1; rx2 <= 1'b1; end
