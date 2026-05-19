@@ -5,8 +5,8 @@ module uart_rx #(parameter width = 8)(
     input                   uart_rec_data_h,
     output reg              rec_busy,
     output reg              rec_ready,
-    output reg [width-1:0]  rec_data_h,
-    output reg [3:0]        count
+    output reg [width-1:0]  rec_data_h
+   
 );
     localparam idle  = 2'd0,
                start = 2'd1,
@@ -17,7 +17,7 @@ module uart_rx #(parameter width = 8)(
     reg [$clog2(width):0] index;
     reg                   rx1, rx2;
     reg                   rx2_sampled;
-
+    reg [3:0]             count
     
     always @(posedge baud_op_clk or negedge sys_rst) begin
         if (!sys_rst) begin rx1 <= 1'b1; rx2 <= 1'b1; end
