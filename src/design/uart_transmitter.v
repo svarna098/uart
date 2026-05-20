@@ -1,6 +1,3 @@
-
-
-
 module uart_tx #(parameter width = 8)(
     input                   baud_op_clk,
     input                   sys_rst,
