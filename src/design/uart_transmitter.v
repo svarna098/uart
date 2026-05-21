@@ -1,4 +1,4 @@
-module uart_tx #(parameter width = 8)(
+/*module uart_tx #(parameter width = 8)(
     input                   baud_op_clk,
     input                   sys_rst,
     input                   xmit_h,
@@ -70,4 +70,112 @@ module uart_tx #(parameter width = 8)(
             default: begin out = 1; nt = idle; end
         endcase
     end
+endmodule
+*/
+module uart_tx #(parameter width = 8)(
+    input                  baud_op_clk,
+    input                  sys_rst,
+    input                  xmit_h,
+    input  [width-1:0]     xmit_data_h,
+    output                 xmit_done_h,
+    output                 xmit_active,
+    output                 uart_xmit_data_h
+);
+    localparam IDLE  = 2'd0,
+               START = 2'd1,
+               DATA  = 2'd2,
+               STOP  = 2'd3;
+
+    reg [1:0]             ct;
+    reg [3:0]             count;
+    reg [$clog2(width):0] index;
+    reg [width-1:0]       latched_data;
+
+    // ---------------------------------------------------------------
+    // Combinational outputs
+    // ---------------------------------------------------------------
+    assign xmit_active      = (ct != IDLE) || (ct == IDLE && xmit_h);
+    assign xmit_done_h      = (ct == IDLE) && !xmit_h;
+    assign uart_xmit_data_h = (ct == IDLE  && !xmit_h) ? 1'b1                :
+                               (ct == IDLE  &&  xmit_h) ? 1'b0                :
+                               (ct == START            ) ? 1'b0                :
+                               (ct == DATA             ) ? latched_data[index] :
+                               (ct == STOP             ) ? 1'b1                :
+                                                           1'b1                ;
+
+    // ---------------------------------------------------------------
+    // Sequential block
+    //
+    // count free-runs 0->15->0->15 continuously once started
+    // state transitions ONLY happen at count==15
+    // so every state gets exactly 16 cycles (count 0,1,...,15)
+    //
+    // IDLE->START: count is forced to 0 on the transition edge
+    //              so START sees count 0,1,...,15 = 16 cycles
+    // All other transitions happen at count==15 naturally
+    //              next state entry always at count==0 (next cycle)
+    // ---------------------------------------------------------------
+    always @(posedge baud_op_clk or negedge sys_rst) begin
+        if (!sys_rst) begin
+            ct           <= IDLE;
+            count        <= 4'd0;
+            index        <= 0;
+            latched_data <= 0;
+        end
+        else begin
+            case (ct)
+
+                IDLE: begin
+                    index <= 0;
+                    if (xmit_h) begin
+                        latched_data <= xmit_data_h;
+                        ct           <= START;
+                        count        <= 4'd0;
+                        // START will see count=0,1,...,15 = 16 cycles
+                    end else begin
+                        count <= 4'd0;
+                    end
+                end
+
+                START: begin
+                    count <= count + 1'b1;
+                    if (count == 4'd15) begin
+                        ct    <= DATA;
+                        // count naturally rolls to 0 next cycle
+                        // DATA entry sees count=0
+                    end
+                end
+
+                DATA: begin
+                    count <= count + 1'b1;
+                    if (count == 4'd15) begin
+                        if (index == width - 1) begin
+                            index <= 0;
+                            ct    <= STOP;
+                        end else begin
+                            index <= index + 1'b1;
+                            ct    <= DATA;
+                        end
+                        // count naturally rolls to 0 next cycle
+                    end
+                end
+
+                STOP: begin
+                    count <= count + 1'b1;
+                    if (count == 4'd15) begin
+                        ct    <= IDLE;
+                        count <= 4'd0;
+                    end
+                end
+
+                default: begin
+                    ct    <= IDLE;
+                    count <= 4'd0;
+                    index <= 0;
+                end
+
+            endcase
+        end
+    end
+
 endmodule
