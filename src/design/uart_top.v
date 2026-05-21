@@ -52,7 +52,7 @@ endmodule*/
 `include "baud_uart.v"
 `include "uart_transmitter.v"
 `include "uart_receiver.v"
-/*
+
 module top #(parameter clk_freq=50000000, baud_rate=2400, width=8)(
     input              sys_clk,
     input              sys_rst,
@@ -89,9 +89,9 @@ module top #(parameter clk_freq=50000000, baud_rate=2400, width=8)(
         .rec_busy        (rec_busy),
         .rec_data_h      (rec_data_h)
     );
-endmodule      */
+endmodule      
 
-
+/*
 `include "inc.h"
 
 module uart (
@@ -140,3 +140,4 @@ module uart (
 
 endmodule
 
+*/
